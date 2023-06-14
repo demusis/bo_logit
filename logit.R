@@ -7,7 +7,7 @@ library(pROC)
 library(rsample)  # para divisão de dados de treino e teste
 library(caret)    # para validação cruzada
 
-setwd("~/Documentos/Carlos Oliveira")
+# setwd("~/Documentos/")
 
 # Carrega e ajusta as variáveis
 dados <- read_excel("BASE DE DADOS_RAIS 2022 TODO ESTADO.xlsx")
@@ -50,6 +50,7 @@ dados <- criar_colunas_binarias(dados, "MOTIVACAO")
 # Seleciona variáveis
 dados <- dados[, 17:50]
 dados <- dados[, c(-14, -15, -18, -33)]
+dados <- na.omit(dados) # Exclui linhas com NAs
 
 # Ajustando o modelo de regressão logística para todos os dados
 modelo_todos <- glm(lesao_corporal ~ ., data = dados, family = binomial("logit"))
@@ -75,11 +76,11 @@ train_data <- training(data_split)
 test_data <- testing(data_split)
 
 # Ajustando o modelo de regressão logística nos dados de treinamento
-modelo <- glm(lesao_corporal ~ ., data = train_data, family = binomial)
-summary(modelo)
+modelo_cv <- glm(lesao_corporal ~ ., data = train_data, family = binomial)
+summary(modelo_cv)
 
 # Extrair os coeficientes do modelo (log-odds)
-log_odds <- coef(modelo_cv$finalModel)
+log_odds <- coef(modelo_cv)
 
 # Converter log-odds para odds
 odds <- exp(log_odds)
@@ -91,13 +92,14 @@ odds_df <- data.frame(Variable = names(odds), Odds = odds)
 print(odds_df)
 
 # Previsão nos dados de teste
-preds <- predict(modelo, newdata = test_data, type = "response")
+preds <- predict(modelo_cv, newdata = test_data, type = "response")
 
 # Convertendo probabilidades em previsões de classe
 preds_class <- ifelse(preds > 0.5, 1, 0)
 
 # Medindo a acurácia
-acuracia <- sum(preds_class == test_data$lesao_corporal) / nrow(test_data)
+vv <- preds_class == test_data$lesao_corporal
+acuracia <- sum(vv) / length(vv)
 print(paste("Acurácia: ", acuracia))
 
 # Calculando a AUC (área sob a curva ROC)
